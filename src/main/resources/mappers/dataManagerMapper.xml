@@ -1,0 +1,266 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ict.egovgo.mapper.dataManagerMapper">
+
+	<select id="selectDataManageList" resultType="DataManageVO">
+		SELECT
+			BNO,
+			TITLE,
+			CONTENT,
+			WRITER,
+			WRITER_NM,
+			GUBUN,
+			ATCH_PATH,
+			ATCH_ORIGINAL_NAME,
+			ATCH_UUID,
+   			TO_CHAR(RGSDE, 'YYYY-MM-DD') AS RGSDE,
+    		TO_CHAR(UPDDE, 'YYYY-MM-DD') AS UPDDE
+		FROM DATA_MANAGE 
+		WHERE 1=1
+			AND WRITER = #{user_id}
+			AND TO_CHAR(RGSDE,'YYYYMMDD') <![CDATA[ >= ]]> #{rgsde_startdt}
+            AND TO_CHAR(RGSDE,'YYYYMMDD')  <![CDATA[ <= ]]> #{rgsde_enddt}
+       		<if test="gubun != 'all'">
+            AND GUBUN = #{gubun}
+            </if> 
+	    	<choose>
+		        <when test="search_type == 'all'">
+		        	 AND (TITLE LIKE '%' || #{search_value} || '%' OR CONTENT LIKE '%' || #{search_value} || '%')
+		        </when>	 
+		        <otherwise>
+		        	<if test="search_type == 'title' and search_value != ''">
+		        	AND TITLE LIKE '%' || #{search_value} || '%'
+		        	</if>
+		        	<if test="search_type == 'content' and search_value != ''">
+		                AND CONTENT LIKE '%' || #{search_value} || '%'
+		            </if>	        	
+		        </otherwise>
+	    	</choose> 
+	    	ORDER BY RGSDE , BNO         
+	</select>
+	
+	<select id ="selectDataManageMaxBno" resultType="int">
+	SELECT NVL(MAX(BOARD_IDNO), 0) + 1 as BNO FROM BOARD_INFO
+	</select>
+	
+	
+	<delete id="deleteDataManage">
+		DELETE
+		FROM DATA_MANAGE
+		WHERE 1=1
+			AND BNO = #{bno}
+	</delete>
+		
+	<insert id ="mergeDataManage">
+		MERGE INTO DATA_MANAGE PDM
+		USING(SELECT #{bno}   AS BNO
+				   , #{title} AS TITLE    
+		           , #{content} AS CONTENT
+		           , #{writer} AS WRITER
+		           , #{writer_nm} AS WRITER_NM
+		           , #{gubun} AS GUBUN
+			  FROM DUAL) PB_T
+		ON (PDM.BNO = PB_T.BNO)
+		WHEN MATCHED THEN
+		UPDATE SET PDM.TITLE = PB_T.TITLE,
+			PDM.CONTENT = PB_T.CONTENT,
+			PDM.GUBUN = PB_T.GUBUN,
+			PDM.UPDDE = SYSDATE
+		WHEN NOT MATCHED THEN
+		INSERT (BNO, TITLE, CONTENT, WRITER, WRITER_NM, GUBUN, RGSDE)
+		VALUES (PB_T.BNO,
+			PB_T.TITLE,
+			PB_T.CONTENT,
+			PB_T.WRITER,
+			PB_T.WRITER_NM,
+			PB_T.GUBUN,
+			SYSDATE
+		)
+	</insert>
+	
+	<select id="selectUploadFileInfo" parameterType ="int" resultType="DataManageVO">
+		SELECT 
+		BNO,
+		ATCH_PATH,
+		ATCH_ORIGINAL_NAME,
+		ATCH_UUID
+		FROM DATA_MANAGE
+		WHERE 1=1
+		AND BNO = #{bno}
+	</select>
+	
+	<update id="updateUploadFileInfo">
+		UPDATE DATA_MANAGE
+		SET ATCH_PATH = #{atch_path}
+	      , ATCH_ORIGINAL_NAME = #{atch_original_name}
+	      , ATCH_UUID = #{atch_uuid}
+	    WHERE 1=1
+	    AND BNO = #{bno}  	
+	</update>	
+	
+	
+	<select id="selectUserInfoList"  resultType="MemberVO">
+	   SELECT
+			USER_ID,
+			USER_NM,
+			DEPT_NM,
+			DEPT_POSITION,
+			HP,
+			EMAIL,
+			EMP_STATUS,
+			AUTH_YN,
+			USER_PW
+		FROM USER_INFO
+		WHERE 1=1
+		<if test="empStatus != null and empStatus != ''">
+   			 AND EMP_STATUS = #{empStatus}
+		</if>
+		AND USE_YN ='Y'
+		ORDER BY 
+    	CASE WHEN EMP_STATUS = 'Y' THEN 1 ELSE 2 END
+	</select>
+	
+	<insert id="insertUserInfo" >
+	 INSERT INTO USER_INFO (
+	    USER_ID,
+	    USER_NM,
+	    DEPT_NM,
+	    DEPT_POSITION,
+	    HP,
+	    EMAIL,
+	    EMP_STATUS,
+	    USE_YN,
+	    USER_PW
+	) VALUES (
+	    #{userId},       
+	    #{userNm},       
+	    #{deptNm},       
+	    #{deptPosition}, 
+	    #{hp},           
+	    #{email},       
+	    #{empStatus},    
+	    'Y',
+	    #{userPw}
+	)
+	</insert>
+	
+	<update id="updateUserInfo" >
+    UPDATE USER_INFO
+    SET
+        USER_NM = #{userNm},
+        DEPT_NM = #{deptNm},
+        DEPT_POSITION = #{deptPosition},
+        HP = #{hp},
+        EMAIL = #{email},
+        EMP_STATUS = #{empStatus},
+        USER_PW =#{userPw}
+    WHERE
+        USER_ID = #{userId}
+	</update>
+	
+	
+	
+	<update id="deleteUserInfo" >
+    UPDATE USER_INFO
+    SET
+       USE_YN ='N'
+    WHERE
+        USER_ID = #{userId,jdbcType =VARCHAR}
+	</update>
+	
+	
+	<select id="selectBoardList" resultType="DataManageVO">
+		SELECT
+			BOARD_IDNO,
+			TITLE,
+			CONTENT,
+			BOARD_TYPE,
+			AUTHOR,
+			VIEW_COUNT,
+   			TO_CHAR(RGSDE, 'YYYY-MM-DD') AS RGSDE,
+    		TO_CHAR(UPDDE, 'YYYY-MM-DD') AS UPDDE
+		FROM BOARD_INFO 
+		WHERE 1=1
+		<if test='rgsde_startdt != null and rgsde_enddt != null'>
+		AND RGSDE <![CDATA[
+					BETWEEN #{rgsde_startdt, jdbcType=VARCHAR} AND #{rgsde_enddt, jdbcType=VARCHAR}
+				]]>
+		</if>
+		<if test='gubun != "all" and gubun != null'>
+		AND BOARD_TYPE = #{gubun}
+		</if>
+		<if test='search_type == "all" and search_type != null'>
+			AND (TITLE LIKE '%'||#{search_value}||'%'
+			 OR CONTENT LIKE '%'||#{search_value}||'%'
+			 OR AUTHOR LIKE '%'||#{search_value}||'%')
+		</if>
+		<if test='search_type != "all" and search_type != null'>
+		<choose>
+			<when test='search_type == "title"'> AND TITLE LIKE '%'||#{search_value}||'%'</when>
+	    	<when test='search_type == "content"'> AND CONTENT LIKE '%'||#{search_value}||'%'</when>
+			<otherwise> AND AUTHOR LIKE '%'||#{search_value}||'%'</otherwise>
+		</choose>
+	    </if>
+	    ORDER BY RGSDE
+	</select>
+	
+	<select id="selectBoardMap" resultType="DataManageVO">
+		SELECT
+			BOARD_IDNO,
+			TITLE,
+			CONTENT,
+			BOARD_TYPE,
+			AUTHOR,
+			VIEW_COUNT,
+   			TO_CHAR(RGSDE, 'YYYY-MM-DD') AS RGSDE,
+    		TO_CHAR(UPDDE, 'YYYY-MM-DD') AS UPDDE
+		FROM BOARD_INFO 
+		WHERE 1=1
+		  AND BOARD_IDNO = #{board_idno}
+	    ORDER BY RGSDE
+	</select>
+	 
+	<update id="updateViewCount">
+		UPDATE BOARD_INFO
+		SET VIEW_COUNT = #{view_count} 
+	    WHERE 1=1
+	    AND BOARD_IDNO = #{board_idno}  	
+	</update>	
+	
+	<insert id ="registBoard">
+		INSERT INTO BOARD_INFO (BOARD_IDNO,TITLE, CONTENT, BOARD_TYPE, AUTHOR, RGSDE, UPDDE, VIEW_COUNT)
+		VALUES (
+			#{board_idno},
+		    #{title},
+		    #{content},
+		    #{board_type},
+		    #{author},
+		    CURRENT_TIMESTAMP,
+		    CURRENT_TIMESTAMP,
+		    0
+		)
+	</insert>
+	
+	
+	<update id="updateBoard">
+		UPDATE BOARD_INFO
+		SET TITLE = #{title}
+	      , CONTENT = #{content}
+	      , UPDDE = CURRENT_TIMESTAMP
+	    WHERE 1=1
+	    AND BOARD_IDNO = #{board_idno}  	
+	</update>	
+	
+	
+	<delete id="deleteBoard">
+		DELETE
+		FROM BOARD_INFO
+		WHERE 1=1
+			AND BOARD_IDNO = #{board_idno}
+	</delete>
+</mapper>
+
+
