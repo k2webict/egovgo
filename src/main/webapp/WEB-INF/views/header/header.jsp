@@ -21,9 +21,9 @@
 	if(pageUri==null) pageUri = "";
 	pageName = pageUri.substring(pageUri.lastIndexOf("/")+1);
 	if(pageName.equals(BBS)) {
-		title = "게시판 서비스";
+		title = "# 게시판 서비스";
 	} else if(pageName.equals(UMS)) {
-		title = "사용자 서비스";
+		title = "# 사용자 서비스";
 	} else {
 		title = "--";
 	}
